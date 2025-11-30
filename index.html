@@ -41,12 +41,6 @@
             letter-spacing: 2px;
         }
 
-        .subtitle {
-            color: #ffd700;
-            font-size: clamp(0.9em, 3vw, 1.1em);
-            font-style: italic;
-        }
-
         .form-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -109,13 +103,6 @@
             box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
         }
 
-        textarea:disabled {
-            background: #e8e8e8;
-            color: #333;
-            cursor: not-allowed;
-            border-color: #999;
-        }
-
         .wish-display {
             width: 100%;
             padding: 15px;
@@ -142,7 +129,6 @@
             color: #0052a3;
         }
 
-        /* Status-based border colors */
         .person-card.status-saved .wish-display {
             border-color: #28a745;
         }
@@ -180,10 +166,6 @@
             box-shadow: 0 8px 20px rgba(196, 30, 58, 0.5);
         }
 
-        .save-btn:active {
-            transform: scale(0.98);
-        }
-
         .edit-btn {
             background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             color: white;
@@ -195,10 +177,6 @@
             box-shadow: 0 8px 20px rgba(52, 152, 219, 0.5);
         }
 
-        .edit-btn:active {
-            transform: scale(0.98);
-        }
-
         .status-badge {
             display: inline-block;
             padding: 5px 10px;
@@ -206,19 +184,16 @@
             font-size: 0.75em;
             font-weight: bold;
             margin-left: 10px;
-            margin-top: 5px;
         }
 
         .status-saved {
             background: #d4edda;
             color: #155724;
-            border: 1px solid #c3e6cb;
         }
 
         .status-editing {
             background: #fff3cd;
             color: #856404;
-            border: 1px solid #ffeeba;
         }
 
         .action-buttons {
@@ -262,37 +237,26 @@
             display: block;
         }
 
+        .loading {
+            text-align: center;
+            color: #fff;
+            padding: 40px;
+            font-size: 1.2em;
+        }
+
         @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
 
         @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         footer {
@@ -301,64 +265,18 @@
             margin-top: 50px;
             padding-top: 20px;
             border-top: 2px solid rgba(255, 255, 255, 0.2);
-            font-size: 0.9em;
         }
 
         @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8em;
-            }
-
-            .form-container {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-
-            .person-card {
-                padding: 15px;
-            }
-
-            textarea {
-                min-height: 100px;
-            }
-
-            .action-buttons {
-                flex-direction: column;
-            }
-
-            .main-btn {
-                width: 100%;
-            }
-
-            button {
-                padding: 12px 12px;
-                font-size: 0.9em;
-            }
+            .form-container { grid-template-columns: 1fr; }
+            .person-card { padding: 15px; }
+            textarea { min-height: 100px; }
+            .main-btn { width: 100%; }
         }
 
         @media (max-width: 480px) {
-            .person-card {
-                padding: 12px;
-            }
-
-            h1 {
-                font-size: 1.5em;
-            }
-
-            .subtitle {
-                font-size: 0.9em;
-            }
-
-            textarea {
-                min-height: 80px;
-                padding: 10px;
-                font-size: 16px;
-            }
-
-            button {
-                padding: 10px 10px;
-                font-size: 0.85em;
-            }
+            h1 { font-size: 1.5em; }
+            textarea { min-height: 80px; }
         }
     </style>
 </head>
@@ -372,9 +290,13 @@
             ✅ Souhaits enregistrés avec succès!
         </div>
 
-        <div class="form-container" id="formContainer"></div>
+        <div class="loading" id="loading">
+            ⏳ Chargement des souhaits...
+        </div>
 
-        <div class="action-buttons">
+        <div class="form-container" id="formContainer" style="display: none;"></div>
+
+        <div class="action-buttons" id="actionButtons" style="display: none;">
             <button class="main-btn share-btn" onclick="shareLink()">📱 Partager par SMS</button>
         </div>
 
@@ -383,171 +305,133 @@
         </footer>
     </div>
 
-    <script>
-        const familyMembers = ['Kiki', 'Pascal', 'Loic', 'Domi', 'Eric', 'Claire', 'Clément'];
-        const storageKey = 'christmasWishes';
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
 
-        // Initialize the app
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDNnR6qBOxJWGSFPZWXAPXsrVC8NPdMBHI",
+            authDomain: "christmas-wishes-856a8.firebaseapp.com",
+            databaseURL: "https://christmas-wishes-856a8-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "christmas-wishes-856a8",
+            storageBucket: "christmas-wishes-856a8.firebasestorage.app",
+            messagingSenderId: "1075759203110",
+            appId: "1:1075759203110:web:966fcb82f4164a3537b7e7"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database(app);
+        const familyMembers = ['Kiki', 'Pascal', 'Loic', 'Domi', 'Eric', 'Claire', 'Clément'];
+        const dbPath = 'christmasWishes';
+
         function init() {
-            createForm();
-            loadWishes();
+            loadWishesFromDatabase();
         }
 
-        // Create form with one block per family member
+        function loadWishesFromDatabase() {
+            const loadingDiv = document.getElementById('loading');
+            const formContainer = document.getElementById('formContainer');
+            const actionButtons = document.getElementById('actionButtons');
+
+            loadingDiv.style.display = 'block';
+
+            db.ref(dbPath).on('value', (snapshot) => {
+                const wishes = snapshot.val() || {};
+                createForm();
+                renderWishes(wishes);
+                loadingDiv.style.display = 'none';
+                formContainer.style.display = 'grid';
+                actionButtons.style.display = 'flex';
+            });
+        }
+
         function createForm() {
             const container = document.getElementById('formContainer');
             container.innerHTML = '';
 
             familyMembers.forEach(member => {
                 const card = document.createElement('div');
-                const isSaved = isMemberSaved(member);
-                const statusClass = isSaved ? 'status-saved' : 'status-editing';
-                card.className = `person-card ${statusClass}`;
+                card.className = 'person-card status-editing';
                 
-                const statusBadgeClass = isSaved ? 'status-saved' : 'status-editing';
-                const statusText = isSaved ? 'Enregistré' : 'Édition';
-                const buttonText = isSaved ? 'Éditer' : 'Enregistrer';
-                const buttonClass = isSaved ? 'edit-btn' : 'save-btn';
-
                 card.innerHTML = `
                     <div class="person-name">
                         ${member}
-                        <span class="status-badge ${statusBadgeClass}">${statusText}</span>
+                        <span class="status-badge status-editing">Édition</span>
                     </div>
                     <div id="content-${member}"></div>
                     <div class="button-group">
-                        <button class="${buttonClass}" onclick="toggleSaveEdit('${member}')">${buttonText}</button>
+                        <button class="save-btn" onclick="toggleSaveEdit('${member}')">Enregistrer</button>
                     </div>
                 `;
                 container.appendChild(card);
             });
-
-            loadWishes();
         }
 
-        // Check if a member's wishes are saved
-        function isMemberSaved(member) {
-            const saved = localStorage.getItem(storageKey);
-            if (!saved) return false;
-            const wishes = JSON.parse(saved);
-            return wishes[member] !== undefined && wishes[member] !== '';
-        }
-
-        // Load wishes from localStorage
-        function loadWishes() {
-            const saved = localStorage.getItem(storageKey);
-            const wishes = saved ? JSON.parse(saved) : {};
-            
+        function renderWishes(wishes) {
             familyMembers.forEach(member => {
-                const isSaved = isMemberSaved(member);
-                const contentDiv = document.getElementById(`content-${member}`);
                 const text = wishes[member] || '';
+                const contentDiv = document.getElementById(`content-${member}`);
 
-                if (isSaved) {
-                    // Display saved wishes as read-only with clickable URLs
+                if (text) {
                     const displayHtml = parseUrlsInText(text);
                     contentDiv.innerHTML = `<div class="wish-display">${displayHtml}</div>`;
+                    updateCardStatus(member, false);
+                    updateButtonState(member, false);
                 } else {
-                    // Display editable textarea
-                    contentDiv.innerHTML = `<textarea 
-                        id="wishes-${member}" 
-                        placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."
-                    >${text}</textarea>`;
+                    contentDiv.innerHTML = `<textarea id="wishes-${member}" placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."></textarea>`;
                     const textarea = document.getElementById(`wishes-${member}`);
                     textarea.addEventListener('input', () => autoResizeTextarea(textarea));
-                    // Initial resize
-                    setTimeout(() => autoResizeTextarea(textarea), 0);
+                    updateCardStatus(member, true);
+                    updateButtonState(member, true);
                 }
             });
         }
 
-        // Parse URLs in text and convert to clickable links
         function parseUrlsInText(text) {
             const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
             return text.replace(urlRegex, (url) => {
-                // Remove trailing punctuation if present
                 const cleanUrl = url.replace(/[.,;:!?]+$/, '');
-                // Add http:// if it starts with www. but doesn't have protocol
                 const fullUrl = cleanUrl.startsWith('www.') ? 'http://' + cleanUrl : cleanUrl;
                 return `<a href="${fullUrl}" target="_blank">${cleanUrl}</a>`;
             });
         }
 
-        // Auto-resize textarea to fit content
         function autoResizeTextarea(textarea) {
             textarea.style.height = 'auto';
             textarea.style.height = Math.max(120, textarea.scrollHeight) + 'px';
         }
 
-        // Check if content is currently in edit mode (has textarea) or saved mode (has wish-display)
         function isCurrentlyInEditMode(member) {
             const contentDiv = document.getElementById(`content-${member}`);
             return contentDiv.querySelector('textarea') !== null;
         }
 
-        // Toggle between save and edit mode
         function toggleSaveEdit(member) {
             const contentDiv = document.getElementById(`content-${member}`);
             const isInEditMode = isCurrentlyInEditMode(member);
 
             if (isInEditMode) {
-                // Currently in edit mode, save it
                 const textareaElement = contentDiv.querySelector('textarea');
                 if (textareaElement) {
-                    const wishes = JSON.parse(localStorage.getItem(storageKey) || '{}');
-                    wishes[member] = textareaElement.value;
-                    localStorage.setItem(storageKey, JSON.stringify(wishes));
-                    
-                    // Re-render as saved display
-                    const displayHtml = parseUrlsInText(textareaElement.value);
-                    contentDiv.innerHTML = `<div class="wish-display">${displayHtml}</div>`;
-                    
-                    updateButtonState(member, false); // false = currently saved, so show "Éditer"
-                    updateCardStatus(member, false); // Update card class
-                    showSuccessMessage();
+                    const text = textareaElement.value;
+                    db.ref(`${dbPath}/${member}`).set(text).then(() => {
+                        showSuccessMessage();
+                    });
                 }
             } else {
-                // Currently in saved mode, switch to edit mode
-                const saved = localStorage.getItem(storageKey);
-                const wishes = saved ? JSON.parse(saved) : {};
-                const text = wishes[member] || '';
-                
-                contentDiv.innerHTML = `<textarea 
-                    id="wishes-${member}" 
-                    placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."
-                >${text}</textarea>`;
-                
-                const textarea = document.getElementById(`wishes-${member}`);
-                textarea.addEventListener('input', () => autoResizeTextarea(textarea));
-                autoResizeTextarea(textarea);
-                textarea.focus();
-                updateButtonState(member, true); // true = currently in edit mode, so show "Enregistrer"
-                updateCardStatus(member, true); // Update card class
+                const text = db.ref(`${dbPath}/${member}`).once('value').then((snapshot) => {
+                    const text = snapshot.val() || '';
+                    contentDiv.innerHTML = `<textarea id="wishes-${member}" placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici...">${text}</textarea>`;
+                    const textarea = document.getElementById(`wishes-${member}`);
+                    textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                    autoResizeTextarea(textarea);
+                    textarea.focus();
+                    updateButtonState(member, true);
+                    updateCardStatus(member, true);
+                });
             }
         }
 
-        // Update card status class based on mode
-        function updateCardStatus(member, isInEditMode) {
-            const allCards = document.querySelectorAll('.person-card');
-            let targetCard = null;
-            
-            allCards.forEach(card => {
-                if (card.querySelector('.person-name').textContent.includes(member)) {
-                    targetCard = card;
-                }
-            });
-            
-            if (targetCard) {
-                targetCard.classList.remove('status-saved', 'status-editing');
-                if (isInEditMode) {
-                    targetCard.classList.add('status-editing');
-                } else {
-                    targetCard.classList.add('status-saved');
-                }
-            }
-        }
-
-        // Update button and status display
         function updateButtonState(member, isInEditMode) {
             const allCards = document.querySelectorAll('.person-card');
             let targetCard = null;
@@ -563,13 +447,11 @@
                 const statusBadge = targetCard.querySelector('.status-badge');
 
                 if (isInEditMode) {
-                    // In edit mode, show "Enregistrer" button
                     button.textContent = 'Enregistrer';
                     button.className = 'save-btn';
                     statusBadge.textContent = 'Édition';
                     statusBadge.className = 'status-badge status-editing';
                 } else {
-                    // In saved mode, show "Éditer" button
                     button.textContent = 'Éditer';
                     button.className = 'edit-btn';
                     statusBadge.textContent = 'Enregistré';
@@ -578,22 +460,34 @@
             }
         }
 
-        // Display success message
+        function updateCardStatus(member, isInEditMode) {
+            const allCards = document.querySelectorAll('.person-card');
+            let targetCard = null;
+            
+            allCards.forEach(card => {
+                if (card.querySelector('.person-name').textContent.includes(member)) {
+                    targetCard = card;
+                }
+            });
+            
+            if (targetCard) {
+                targetCard.classList.remove('status-saved', 'status-editing');
+                targetCard.classList.add(isInEditMode ? 'status-editing' : 'status-saved');
+            }
+        }
+
         function showSuccessMessage() {
             const msg = document.getElementById('successMessage');
             msg.classList.add('show');
             setTimeout(() => msg.classList.remove('show'), 3000);
         }
 
-        // Share link via SMS
         function shareLink() {
             const url = window.location.href;
             const text = `🎄 Consultez notre Liste de Souhaits Noël en famille! ${url}`;
-            const smsLink = `sms:?body=${encodeURIComponent(text)}`;
-            window.location.href = smsLink;
+            window.location.href = `sms:?body=${encodeURIComponent(text)}`;
         }
 
-        // Initialize app on load
         window.addEventListener('load', init);
     </script>
 </body>
