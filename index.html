@@ -90,16 +90,17 @@
             width: 100%;
             min-height: 120px;
             padding: 15px;
-            border: 2px solid #c41e3a;
+            border: 2px solid #ffc107;
             border-radius: 10px;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 0.95em;
-            resize: vertical;
-            background: #fff;
+            resize: none;
+            background: #fff5e6;
             color: #333;
             transition: all 0.3s ease;
             margin-bottom: 15px;
             flex-grow: 1;
+            overflow: hidden;
         }
 
         textarea:focus {
@@ -109,10 +110,45 @@
         }
 
         textarea:disabled {
-            background: #f5f5f5;
-            color: #666;
+            background: #e8e8e8;
+            color: #333;
             cursor: not-allowed;
-            border-color: #ccc;
+            border-color: #999;
+        }
+
+        .wish-display {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.95em;
+            background: #fff5e6;
+            color: #333;
+            margin-bottom: 15px;
+            flex-grow: 1;
+            line-height: 1.5;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .wish-display a {
+            color: #0066cc;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .wish-display a:hover {
+            color: #0052a3;
+        }
+
+        /* Status-based border colors */
+        .person-card.status-saved .wish-display {
+            border-color: #28a745;
+        }
+
+        .person-card.status-editing textarea {
+            border-color: #ffc107;
         }
 
         .button-group {
@@ -329,8 +365,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎄 Liste de Souhaits Noël 2025 🎄</h1>
-            <p class="subtitle">Partagez vos souhaits en famille!</p>
+            <h1>🎄 Votre liste au Père Noël 🎄</h1>
         </header>
 
         <div class="success-message" id="successMessage">
@@ -365,31 +400,29 @@
 
             familyMembers.forEach(member => {
                 const card = document.createElement('div');
-                card.className = 'person-card';
-                
                 const isSaved = isMemberSaved(member);
                 const statusClass = isSaved ? 'status-saved' : 'status-editing';
+                card.className = `person-card ${statusClass}`;
+                
+                const statusBadgeClass = isSaved ? 'status-saved' : 'status-editing';
                 const statusText = isSaved ? 'Enregistré' : 'Édition';
                 const buttonText = isSaved ? 'Éditer' : 'Enregistrer';
                 const buttonClass = isSaved ? 'edit-btn' : 'save-btn';
-                const isDisabled = isSaved;
 
                 card.innerHTML = `
                     <div class="person-name">
                         ${member}
-                        <span class="status-badge ${statusClass}">${statusText}</span>
+                        <span class="status-badge ${statusBadgeClass}">${statusText}</span>
                     </div>
-                    <textarea 
-                        id="wishes-${member}" 
-                        placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."
-                        ${isDisabled ? 'disabled' : ''}
-                    ></textarea>
+                    <div id="content-${member}"></div>
                     <div class="button-group">
                         <button class="${buttonClass}" onclick="toggleSaveEdit('${member}')">${buttonText}</button>
                     </div>
                 `;
                 container.appendChild(card);
             });
+
+            loadWishes();
         }
 
         // Check if a member's wishes are saved
@@ -403,54 +436,143 @@
         // Load wishes from localStorage
         function loadWishes() {
             const saved = localStorage.getItem(storageKey);
-            if (saved) {
-                const wishes = JSON.parse(saved);
-                familyMembers.forEach(member => {
+            const wishes = saved ? JSON.parse(saved) : {};
+            
+            familyMembers.forEach(member => {
+                const isSaved = isMemberSaved(member);
+                const contentDiv = document.getElementById(`content-${member}`);
+                const text = wishes[member] || '';
+
+                if (isSaved) {
+                    // Display saved wishes as read-only with clickable URLs
+                    const displayHtml = parseUrlsInText(text);
+                    contentDiv.innerHTML = `<div class="wish-display">${displayHtml}</div>`;
+                } else {
+                    // Display editable textarea
+                    contentDiv.innerHTML = `<textarea 
+                        id="wishes-${member}" 
+                        placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."
+                    >${text}</textarea>`;
                     const textarea = document.getElementById(`wishes-${member}`);
-                    if (textarea && wishes[member]) {
-                        textarea.value = wishes[member];
-                    }
-                });
-            }
+                    textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                    // Initial resize
+                    setTimeout(() => autoResizeTextarea(textarea), 0);
+                }
+            });
+        }
+
+        // Parse URLs in text and convert to clickable links
+        function parseUrlsInText(text) {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlRegex, (url) => {
+                // Remove trailing punctuation if present
+                const cleanUrl = url.replace(/[.,;:!?]+$/, '');
+                return `<a href="${cleanUrl}" target="_blank">${cleanUrl}</a>`;
+            });
+        }
+
+        // Auto-resize textarea to fit content
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.max(120, textarea.scrollHeight) + 'px';
+        }
+
+        // Check if content is currently in edit mode (has textarea) or saved mode (has wish-display)
+        function isCurrentlyInEditMode(member) {
+            const contentDiv = document.getElementById(`content-${member}`);
+            return contentDiv.querySelector('textarea') !== null;
         }
 
         // Toggle between save and edit mode
         function toggleSaveEdit(member) {
-            const textarea = document.getElementById(`wishes-${member}`);
-            const isCurrentlyDisabled = textarea.disabled;
+            const contentDiv = document.getElementById(`content-${member}`);
+            const isInEditMode = isCurrentlyInEditMode(member);
 
-            if (isCurrentlyDisabled) {
-                // Currently disabled (saved), switch to edit mode
-                textarea.disabled = false;
-                textarea.focus();
-                updateButtonState(member, false);
+            if (isInEditMode) {
+                // Currently in edit mode, save it
+                const textareaElement = contentDiv.querySelector('textarea');
+                if (textareaElement) {
+                    const wishes = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                    wishes[member] = textareaElement.value;
+                    localStorage.setItem(storageKey, JSON.stringify(wishes));
+                    
+                    // Re-render as saved display
+                    const displayHtml = parseUrlsInText(textareaElement.value);
+                    contentDiv.innerHTML = `<div class="wish-display">${displayHtml}</div>`;
+                    
+                    updateButtonState(member, false); // false = currently saved, so show "Éditer"
+                    updateCardStatus(member, false); // Update card class
+                    showSuccessMessage();
+                }
             } else {
-                // Currently enabled (editing), save it
-                const wishes = JSON.parse(localStorage.getItem(storageKey) || '{}');
-                wishes[member] = textarea.value;
-                localStorage.setItem(storageKey, JSON.stringify(wishes));
-                textarea.disabled = true;
-                updateButtonState(member, true);
-                showSuccessMessage();
+                // Currently in saved mode, switch to edit mode
+                const saved = localStorage.getItem(storageKey);
+                const wishes = saved ? JSON.parse(saved) : {};
+                const text = wishes[member] || '';
+                
+                contentDiv.innerHTML = `<textarea 
+                    id="wishes-${member}" 
+                    placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."
+                >${text}</textarea>`;
+                
+                const textarea = document.getElementById(`wishes-${member}`);
+                textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                autoResizeTextarea(textarea);
+                textarea.focus();
+                updateButtonState(member, true); // true = currently in edit mode, so show "Enregistrer"
+                updateCardStatus(member, true); // Update card class
+            }
+        }
+
+        // Update card status class based on mode
+        function updateCardStatus(member, isInEditMode) {
+            const allCards = document.querySelectorAll('.person-card');
+            let targetCard = null;
+            
+            allCards.forEach(card => {
+                if (card.querySelector('.person-name').textContent.includes(member)) {
+                    targetCard = card;
+                }
+            });
+            
+            if (targetCard) {
+                targetCard.classList.remove('status-saved', 'status-editing');
+                if (isInEditMode) {
+                    targetCard.classList.add('status-editing');
+                } else {
+                    targetCard.classList.add('status-saved');
+                }
             }
         }
 
         // Update button and status display
-        function updateButtonState(member, isSaved) {
-            const card = document.querySelector(`#wishes-${member}`).closest('.person-card');
-            const button = card.querySelector('button');
-            const statusBadge = card.querySelector('.status-badge');
+        function updateButtonState(member, isInEditMode) {
+            const allCards = document.querySelectorAll('.person-card');
+            let targetCard = null;
+            
+            allCards.forEach(card => {
+                if (card.querySelector('.person-name').textContent.includes(member)) {
+                    targetCard = card;
+                }
+            });
+            
+            if (targetCard) {
+                const button = targetCard.querySelector('button');
+                const statusBadge = targetCard.querySelector('.status-badge');
 
-            if (isSaved) {
-                button.textContent = 'Éditer';
-                button.className = 'edit-btn';
-                statusBadge.textContent = 'Enregistré';
-                statusBadge.className = 'status-badge status-saved';
-            } else {
-                button.textContent = 'Enregistrer';
-                button.className = 'save-btn';
-                statusBadge.textContent = 'Édition';
-                statusBadge.className = 'status-badge status-editing';
+                if (isInEditMode) {
+                    // In edit mode, show "Enregistrer" button
+                    button.textContent = 'Enregistrer';
+                    button.className = 'save-btn';
+                    statusBadge.textContent = 'Édition';
+                    statusBadge.className = 'status-badge status-editing';
+                } else {
+                    // In saved mode, show "Éditer" button
+                    button.textContent = 'Éditer';
+                    button.className = 'edit-btn';
+                    statusBadge.textContent = 'Enregistré';
+                    statusBadge.className = 'status-badge status-saved';
+                }
             }
         }
 
