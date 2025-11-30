@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎄 Liste de Souhaits Noël (Realtime) 🎄</title>
     <style>
-        /* Your existing CSS goes here. No changes needed for CSS. */
         * {
             margin: 0;
             padding: 0;
@@ -102,6 +101,8 @@
             margin-bottom: 15px;
             flex-grow: 1;
             overflow: hidden;
+            word-break: break-all;   /* Forces break at any character for long words/URLs */
+            overflow-wrap: break-word; /* Breaks words at word boundaries when possible */
         }
 
         textarea:focus {
@@ -129,14 +130,18 @@
             margin-bottom: 15px;
             flex-grow: 1;
             line-height: 1.5;
-            word-wrap: break-word;
+            word-wrap: break-word; /* Standard word breaking */
+            word-break: break-all;   /* Forces break at any character for long words/URLs */
             white-space: pre-wrap;
         }
-
+        
         .wish-display a {
             color: #0066cc;
             text-decoration: underline;
             cursor: pointer;
+            /* Applying to 'a' too, though usually inherited from parent */
+            word-break: break-all;
+            overflow-wrap: break-word;
         }
 
         .wish-display a:hover {
@@ -392,7 +397,7 @@
     <script>
         // Your Firebase project configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyDNnR6qBOxJWGSFPZWXAPVsrVC8NPdMBHI",
+            apiKey: "AIzaSyDNnR6qBOxJWGSFPZWXAPVsrVC8NPVMBHI", // Ensure this is your correct API key
             authDomain: "christmas-wishes-856a8.firebaseapp.com",
             databaseURL: "https://christmas-wishes-856a8-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "christmas-wishes-856a8",
