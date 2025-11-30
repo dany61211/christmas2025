@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎄 Liste de Souhaits Noël</title>
+    <title>🎄 Liste de Souhaits Noël (Realtime) 🎄</title>
     <style>
+        /* Your existing CSS goes here. No changes needed for CSS. */
         * {
             margin: 0;
             padding: 0;
@@ -39,6 +40,12 @@
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: #ffd700;
+            font-size: clamp(0.9em, 3vw, 1.1em);
+            font-style: italic;
         }
 
         .form-container {
@@ -103,6 +110,13 @@
             box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
         }
 
+        textarea:disabled {
+            background: #e8e8e8;
+            color: #333;
+            cursor: not-allowed;
+            border-color: #999;
+        }
+
         .wish-display {
             width: 100%;
             padding: 15px;
@@ -129,6 +143,7 @@
             color: #0052a3;
         }
 
+        /* Status-based border colors */
         .person-card.status-saved .wish-display {
             border-color: #28a745;
         }
@@ -166,6 +181,10 @@
             box-shadow: 0 8px 20px rgba(196, 30, 58, 0.5);
         }
 
+        .save-btn:active {
+            transform: scale(0.98);
+        }
+
         .edit-btn {
             background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             color: white;
@@ -177,6 +196,10 @@
             box-shadow: 0 8px 20px rgba(52, 152, 219, 0.5);
         }
 
+        .edit-btn:active {
+            transform: scale(0.98);
+        }
+
         .status-badge {
             display: inline-block;
             padding: 5px 10px;
@@ -184,16 +207,19 @@
             font-size: 0.75em;
             font-weight: bold;
             margin-left: 10px;
+            margin-top: 5px;
         }
 
         .status-saved {
             background: #d4edda;
             color: #155724;
+            border: 1px solid #c3e6cb;
         }
 
         .status-editing {
             background: #fff3cd;
             color: #856404;
+            border: 1px solid #ffeeba;
         }
 
         .action-buttons {
@@ -237,26 +263,37 @@
             display: block;
         }
 
-        .loading {
-            text-align: center;
-            color: #fff;
-            padding: 40px;
-            font-size: 1.2em;
-        }
-
         @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-30px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         @keyframes popIn {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         footer {
@@ -265,13 +302,64 @@
             margin-top: 50px;
             padding-top: 20px;
             border-top: 2px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.9em;
         }
 
         @media (max-width: 768px) {
-            .form-container { grid-template-columns: 1fr; }
-            .person-card { padding: 15px; }
-            textarea { min-height: 100px; }
-            .main-btn { width: 100%; }
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .form-container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .person-card {
+                padding: 15px;
+            }
+
+            textarea {
+                min-height: 100px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .main-btn {
+                width: 100%;
+            }
+
+            button {
+                padding: 12px 12px;
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .person-card {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .subtitle {
+                font-size: 0.9em;
+            }
+
+            textarea {
+                min-height: 80px;
+                padding: 10px;
+                font-size: 16px;
+            }
+
+            button {
+                padding: 10px 10px;
+                font-size: 0.85em;
+            }
         }
     </style>
 </head>
@@ -285,13 +373,9 @@
             ✅ Souhaits enregistrés avec succès!
         </div>
 
-        <div class="loading" id="loading">
-            ⏳ Chargement des souhaits...
-        </div>
+        <div class="form-container" id="formContainer"></div>
 
-        <div class="form-container" id="formContainer" style="display: none;"></div>
-
-        <div class="action-buttons" id="actionButtons" style="display: none;">
+        <div class="action-buttons">
             <button class="main-btn share-btn" onclick="shareLink()">📱 Partager par SMS</button>
         </div>
 
@@ -300,208 +384,230 @@
         </footer>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
-
+    <!-- Firebase SDKs - make sure these are loaded before your custom script -->
+    <!-- Using the "compat" versions for simpler integration with script tags -->
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    
     <script>
+        // Your Firebase project configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyDNnR6qBOxJWGSFPZWXAPXsrVC8NPdMBHI",
+            apiKey: "AIzaSyDNnR6qBOxJWGSFPZWXAPVsrVC8NPdMBHI",
             authDomain: "christmas-wishes-856a8.firebaseapp.com",
             databaseURL: "https://christmas-wishes-856a8-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "christmas-wishes-856a8",
             storageBucket: "christmas-wishes-856a8.firebasestorage.app",
             messagingSenderId: "1075759203110",
-            appId: "1:1075759203110:web:966fcb82f4164a3537b7e7"
+            appId: "1:1075759203110:web:966fcb82f4164a3537b7e7",
+            measurementId: "G-885RVWRQM7"
         };
 
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.database(app);
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const christmasWishesRef = db.ref('christmasWishes'); // Reference to the 'christmasWishes' node in your RTDB
+
         const familyMembers = ['Kiki', 'Pascal', 'Loic', 'Domi', 'Eric', 'Claire', 'Clément'];
-        const dbPath = 'christmasWishes';
-        let dataLoaded = false;
 
+        // Initialize the app
         function init() {
-            setTimeout(() => {
-                if (!dataLoaded) {
-                    document.getElementById('loading').innerHTML = '❌ Erreur de chargement. Veuillez rafraîchir la page.';
-                }
-            }, 5000);
-
-            loadWishesFromDatabase();
+            // First, create the basic structure of the cards for all family members
+            createFormStructure();
+            // Then, set up the real-time listener to populate them with data and keep them updated
+            listenForWishes();
         }
 
-        function loadWishesFromDatabase() {
-            db.ref(dbPath).once('value').then((snapshot) => {
-                const wishes = snapshot.val() || {};
-                createForm();
-                renderWishes(wishes);
-                
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('formContainer').style.display = 'grid';
-                document.getElementById('actionButtons').style.display = 'flex';
-                
-                dataLoaded = true;
-                
-                // Now listen for real-time updates
-                db.ref(dbPath).on('value', (snapshot) => {
-                    const wishes = snapshot.val() || {};
-                    renderWishes(wishes);
-                });
-            }).catch((error) => {
-                console.error('Error loading data:', error);
-                document.getElementById('loading').innerHTML = '❌ Erreur: ' + error.message;
-            });
-        }
-
-        function createForm() {
+        // Creates the initial HTML structure for each family member's card
+        function createFormStructure() {
             const container = document.getElementById('formContainer');
-            container.innerHTML = '';
+            container.innerHTML = ''; // Clear existing content before creating new structure
 
             familyMembers.forEach(member => {
                 const card = document.createElement('div');
-                card.className = 'person-card status-editing';
+                card.className = `person-card`; // Initial class, status will be added by listener
+                card.setAttribute('data-member', member); // Useful for finding the card later
                 
                 card.innerHTML = `
                     <div class="person-name">
                         ${member}
-                        <span class="status-badge status-editing">Édition</span>
+                        <span class="status-badge"></span> <!-- Status badge will be updated -->
                     </div>
-                    <div id="content-${member}"></div>
+                    <div id="content-${member}" class="wish-content-area"></div> <!-- Content area for textarea or display -->
                     <div class="button-group">
-                        <button class="save-btn" onclick="toggleSaveEdit('${member}')">Enregistrer</button>
+                        <button class="" onclick="toggleSaveEdit('${member}')"></button> <!-- Button will be updated -->
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        function renderWishes(wishes) {
-            familyMembers.forEach(member => {
-                const text = wishes[member] || '';
-                const contentDiv = document.getElementById(`content-${member}`);
+        // Sets up a real-time listener for changes in the Firebase Realtime Database
+        function listenForWishes() {
+            christmasWishesRef.on('value', (snapshot) => {
+                // Get all wishes from the database. If no data, it will be an empty object.
+                const allWishes = snapshot.val() || {}; 
+                
+                familyMembers.forEach(member => {
+                    // Find the specific card for this family member
+                    const memberCard = document.querySelector(`.person-card[data-member="${member}"]`);
+                    if (!memberCard) return; // Should always exist after createFormStructure()
 
-                if (text) {
-                    const displayHtml = parseUrlsInText(text);
-                    contentDiv.innerHTML = `<div class="wish-display">${displayHtml}</div>`;
-                    updateCardStatus(member, false);
-                    updateButtonState(member, false);
-                } else {
-                    contentDiv.innerHTML = `<textarea id="wishes-${member}" placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."></textarea>`;
-                    const textarea = document.getElementById(`wishes-${member}`);
-                    if (textarea) {
-                        textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                    const contentDiv = memberCard.querySelector('.wish-content-area');
+                    const button = memberCard.querySelector('.button-group button');
+                    const statusBadge = memberCard.querySelector('.status-badge');
+
+                    // Get the wish text for the current member, or an empty string if none
+                    const text = allWishes[member] || ''; 
+
+                    // Determine if the wish is saved (non-empty) or in 'editing' state (empty or being edited)
+                    const isSaved = text.trim() !== '';
+
+                    if (isSaved) {
+                        // If a wish is saved, display it as read-only with clickable URLs
+                        const displayHtml = parseUrlsInText(text);
+                        contentDiv.innerHTML = `<div class="wish-display">${displayHtml}</div>`;
+                        // Update UI elements for 'saved' state
+                        updateButtonState(member, false); // false means 'saved', so show "Éditer"
+                        updateCardStatus(member, false); // Update card class for 'saved'
+                    } else {
+                        // If no wish, or if it's currently being edited by this user
+                        // Check if a textarea already exists to avoid re-creating it unnecessarily
+                        let textarea = contentDiv.querySelector('textarea');
+                        if (!textarea) {
+                             // If no textarea, create one
+                             contentDiv.innerHTML = `<textarea 
+                                id="wishes-${member}" 
+                                placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."
+                            ></textarea>`;
+                            textarea = contentDiv.querySelector('textarea');
+                            // Attach event listener for auto-resizing
+                            textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                        }
+                        textarea.value = text; // Ensure textarea content is always updated from DB
+                        autoResizeTextarea(textarea); // Resize textarea based on content
+                        // Update UI elements for 'editing' state
+                        updateButtonState(member, true); // true means 'editing', so show "Enregistrer"
+                        updateCardStatus(member, true); // Update card class for 'editing'
                     }
-                    updateCardStatus(member, true);
-                    updateButtonState(member, true);
-                }
+                });
             });
         }
 
+        // Function to parse URLs in text and convert them into clickable links
         function parseUrlsInText(text) {
             const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
             return text.replace(urlRegex, (url) => {
-                const cleanUrl = url.replace(/[.,;:!?]+$/, '');
-                const fullUrl = cleanUrl.startsWith('www.') ? 'http://' + cleanUrl : cleanUrl;
+                const cleanUrl = url.replace(/[.,;:!?]+$/, ''); // Remove trailing punctuation
+                const fullUrl = cleanUrl.startsWith('www.') ? 'http://' + cleanUrl : cleanUrl; // Add http:// if missing
                 return `<a href="${fullUrl}" target="_blank">${cleanUrl}</a>`;
             });
         }
 
+        // Dynamically adjusts the height of a textarea to fit its content
         function autoResizeTextarea(textarea) {
             textarea.style.height = 'auto';
             textarea.style.height = Math.max(120, textarea.scrollHeight) + 'px';
         }
 
-        function isCurrentlyInEditMode(member) {
-            const contentDiv = document.getElementById(`content-${member}`);
-            return contentDiv.querySelector('textarea') !== null;
-        }
+        // Toggles between displaying the wish as text or an editable textarea
+        async function toggleSaveEdit(member) {
+            const memberCard = document.querySelector(`.person-card[data-member="${member}"]`);
+            if (!memberCard) return;
 
-        function toggleSaveEdit(member) {
-            const contentDiv = document.getElementById(`content-${member}`);
-            const isInEditMode = isCurrentlyInEditMode(member);
+            const contentDiv = memberCard.querySelector('.wish-content-area');
+            const button = memberCard.querySelector('button');
 
-            if (isInEditMode) {
+            // Check if the button currently says 'Enregistrer' (meaning we are in edit mode)
+            const isCurrentlyInEditMode = (button.textContent.trim() === 'Enregistrer');
+
+            if (isCurrentlyInEditMode) {
+                // If in edit mode and button is 'Enregistrer', save the data to Firebase
                 const textareaElement = contentDiv.querySelector('textarea');
                 if (textareaElement) {
-                    const text = textareaElement.value;
-                    db.ref(`${dbPath}/${member}`).set(text).then(() => {
+                    const wishText = textareaElement.value;
+                    try {
+                        // Use .set() to save the wish. This will trigger the 'value' listener.
+                        await christmasWishesRef.child(member).set(wishText);
                         showSuccessMessage();
-                    }).catch((error) => {
-                        console.error('Error saving:', error);
-                    });
+                        // The 'listenForWishes' function will then automatically update the UI
+                        // for this member (and everyone else) to the 'saved' state.
+                    } catch (error) {
+                        console.error("Erreur lors de l'enregistrement du souhait:", error);
+                        alert("Erreur lors de l'enregistrement de votre souhait. Veuillez réessayer.");
+                    }
                 }
             } else {
-                db.ref(`${dbPath}/${member}`).once('value').then((snapshot) => {
-                    const text = snapshot.val() || '';
-                    contentDiv.innerHTML = `<textarea id="wishes-${member}" placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici...">${text}</textarea>`;
-                    const textarea = document.getElementById(`wishes-${member}`);
-                    textarea.addEventListener('input', () => autoResizeTextarea(textarea));
-                    autoResizeTextarea(textarea);
-                    textarea.focus();
-                    updateButtonState(member, true);
-                    updateCardStatus(member, true);
-                }).catch((error) => {
-                    console.error('Error loading:', error);
-                });
+                // If not in edit mode and button is 'Éditer', switch to edit mode
+                // Get the currently displayed text from the .wish-display div
+                const currentWishText = contentDiv.querySelector('.wish-display')?.innerText || ''; 
+
+                // Replace the display div with a textarea, pre-filled with the current text
+                contentDiv.innerHTML = `<textarea 
+                    id="wishes-${member}" 
+                    placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."
+                >${currentWishText}</textarea>`;
+                
+                const textarea = contentDiv.querySelector('textarea');
+                textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                autoResizeTextarea(textarea);
+                textarea.focus(); // Focus on the textarea for immediate editing
+
+                // Update UI elements for 'editing' state
+                updateButtonState(member, true); // Button becomes 'Enregistrer'
+                updateCardStatus(member, true); // Card class becomes 'editing'
             }
         }
 
-        function updateButtonState(member, isInEditMode) {
-            const allCards = document.querySelectorAll('.person-card');
-            let targetCard = null;
-            
-            allCards.forEach(card => {
-                if (card.querySelector('.person-name').textContent.includes(member)) {
-                    targetCard = card;
-                }
-            });
-            
-            if (targetCard) {
-                const button = targetCard.querySelector('button');
-                const statusBadge = targetCard.querySelector('.status-badge');
-
-                if (isInEditMode) {
-                    button.textContent = 'Enregistrer';
-                    button.className = 'save-btn';
-                    statusBadge.textContent = 'Édition';
-                    statusBadge.className = 'status-badge status-editing';
-                } else {
-                    button.textContent = 'Éditer';
-                    button.className = 'edit-btn';
-                    statusBadge.textContent = 'Enregistré';
-                    statusBadge.className = 'status-badge status-saved';
-                }
-            }
-        }
-
+        // Updates the card's visual status (border, badge)
         function updateCardStatus(member, isInEditMode) {
-            const allCards = document.querySelectorAll('.person-card');
-            let targetCard = null;
+            const memberCard = document.querySelector(`.person-card[data-member="${member}"]`);
+            if (!memberCard) return;
             
-            allCards.forEach(card => {
-                if (card.querySelector('.person-name').textContent.includes(member)) {
-                    targetCard = card;
-                }
-            });
-            
-            if (targetCard) {
-                targetCard.classList.remove('status-saved', 'status-editing');
-                targetCard.classList.add(isInEditMode ? 'status-editing' : 'status-saved');
+            memberCard.classList.remove('status-saved', 'status-editing');
+            if (isInEditMode) {
+                memberCard.classList.add('status-editing');
+            } else {
+                memberCard.classList.add('status-saved');
             }
         }
 
+        // Updates the text and class of the button and status badge
+        function updateButtonState(member, isInEditMode) {
+            const memberCard = document.querySelector(`.person-card[data-member="${member}"]`);
+            if (!memberCard) return;
+
+            const button = memberCard.querySelector('.button-group button');
+            const statusBadge = memberCard.querySelector('.status-badge');
+
+            if (isInEditMode) {
+                button.textContent = 'Enregistrer';
+                button.className = 'save-btn';
+                statusBadge.textContent = 'Édition';
+                statusBadge.className = 'status-badge status-editing';
+            } else {
+                button.textContent = 'Éditer';
+                button.className = 'edit-btn';
+                statusBadge.textContent = 'Enregistré';
+                statusBadge.className = 'status-badge status-saved';
+            }
+        }
+
+        // Displays a temporary success message
         function showSuccessMessage() {
             const msg = document.getElementById('successMessage');
             msg.classList.add('show');
             setTimeout(() => msg.classList.remove('show'), 3000);
         }
 
+        // Generates and opens an SMS link to share the app URL
         function shareLink() {
             const url = window.location.href;
-            const text = `🎄 Consultez notre Liste de Souhaits Noël en famille! ${url}`;
-            window.location.href = `sms:?body=${encodeURIComponent(text)}`;
+            const text = `🎄 Consultez et ajoutez à notre Liste de Souhaits Noël en famille! ${url}`;
+            const smsLink = `sms:?body=${encodeURIComponent(text)}`;
+            window.location.href = smsLink;
         }
 
+        // Initialize the application when the window finishes loading
         window.addEventListener('load', init);
     </script>
 </body>
