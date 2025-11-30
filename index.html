@@ -463,11 +463,13 @@
 
         // Parse URLs in text and convert to clickable links
         function parseUrlsInText(text) {
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
             return text.replace(urlRegex, (url) => {
                 // Remove trailing punctuation if present
                 const cleanUrl = url.replace(/[.,;:!?]+$/, '');
-                return `<a href="${cleanUrl}" target="_blank">${cleanUrl}</a>`;
+                // Add http:// if it starts with www. but doesn't have protocol
+                const fullUrl = cleanUrl.startsWith('www.') ? 'http://' + cleanUrl : cleanUrl;
+                return `<a href="${fullUrl}" target="_blank">${cleanUrl}</a>`;
             });
         }
 
