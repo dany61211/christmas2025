@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎄 Liste de Souhaits Noël (Realtime) 🎄</title>
     <style>
-        /* Your existing CSS goes here. No changes needed for CSS. */
         * {
             margin: 0;
             padding: 0;
@@ -102,6 +101,7 @@
             margin-bottom: 15px;
             flex-grow: 1;
             overflow: hidden;
+            word-break: break-all; /* Added for long URLs */
         }
 
         textarea:focus {
@@ -129,7 +129,8 @@
             margin-bottom: 15px;
             flex-grow: 1;
             line-height: 1.5;
-            word-wrap: break-word;
+            word-wrap: break-word; /* Keeps existing, good for general wrapping */
+            word-break: break-all; /* Added for long URLs */
             white-space: pre-wrap;
         }
 
