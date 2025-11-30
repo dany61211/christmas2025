@@ -273,11 +273,6 @@
             textarea { min-height: 100px; }
             .main-btn { width: 100%; }
         }
-
-        @media (max-width: 480px) {
-            h1 { font-size: 1.5em; }
-            textarea { min-height: 80px; }
-        }
     </style>
 </head>
 <body>
@@ -323,25 +318,38 @@
         const db = firebase.database(app);
         const familyMembers = ['Kiki', 'Pascal', 'Loic', 'Domi', 'Eric', 'Claire', 'Clément'];
         const dbPath = 'christmasWishes';
+        let dataLoaded = false;
 
         function init() {
+            setTimeout(() => {
+                if (!dataLoaded) {
+                    document.getElementById('loading').innerHTML = '❌ Erreur de chargement. Veuillez rafraîchir la page.';
+                }
+            }, 5000);
+
             loadWishesFromDatabase();
         }
 
         function loadWishesFromDatabase() {
-            const loadingDiv = document.getElementById('loading');
-            const formContainer = document.getElementById('formContainer');
-            const actionButtons = document.getElementById('actionButtons');
-
-            loadingDiv.style.display = 'block';
-
-            db.ref(dbPath).on('value', (snapshot) => {
+            db.ref(dbPath).once('value').then((snapshot) => {
                 const wishes = snapshot.val() || {};
                 createForm();
                 renderWishes(wishes);
-                loadingDiv.style.display = 'none';
-                formContainer.style.display = 'grid';
-                actionButtons.style.display = 'flex';
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('formContainer').style.display = 'grid';
+                document.getElementById('actionButtons').style.display = 'flex';
+                
+                dataLoaded = true;
+                
+                // Now listen for real-time updates
+                db.ref(dbPath).on('value', (snapshot) => {
+                    const wishes = snapshot.val() || {};
+                    renderWishes(wishes);
+                });
+            }).catch((error) => {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').innerHTML = '❌ Erreur: ' + error.message;
             });
         }
 
@@ -380,7 +388,9 @@
                 } else {
                     contentDiv.innerHTML = `<textarea id="wishes-${member}" placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici..."></textarea>`;
                     const textarea = document.getElementById(`wishes-${member}`);
-                    textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                    if (textarea) {
+                        textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+                    }
                     updateCardStatus(member, true);
                     updateButtonState(member, true);
                 }
@@ -416,10 +426,12 @@
                     const text = textareaElement.value;
                     db.ref(`${dbPath}/${member}`).set(text).then(() => {
                         showSuccessMessage();
+                    }).catch((error) => {
+                        console.error('Error saving:', error);
                     });
                 }
             } else {
-                const text = db.ref(`${dbPath}/${member}`).once('value').then((snapshot) => {
+                db.ref(`${dbPath}/${member}`).once('value').then((snapshot) => {
                     const text = snapshot.val() || '';
                     contentDiv.innerHTML = `<textarea id="wishes-${member}" placeholder="Quels sont vos souhaits pour Noël? Écrivez vos souhaits ici...">${text}</textarea>`;
                     const textarea = document.getElementById(`wishes-${member}`);
@@ -428,6 +440,8 @@
                     textarea.focus();
                     updateButtonState(member, true);
                     updateCardStatus(member, true);
+                }).catch((error) => {
+                    console.error('Error loading:', error);
                 });
             }
         }
