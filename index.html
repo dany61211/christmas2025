@@ -329,7 +329,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎄 Liste de Souhaits Noël 🎄</h1>
+            <h1>🎄 Liste de Souhaits Noël 2025 🎄</h1>
             <p class="subtitle">Partagez vos souhaits en famille!</p>
         </header>
 
@@ -417,15 +417,15 @@
         // Toggle between save and edit mode
         function toggleSaveEdit(member) {
             const textarea = document.getElementById(`wishes-${member}`);
-            const isSaved = isMemberSaved(member);
+            const isCurrentlyDisabled = textarea.disabled;
 
-            if (isSaved) {
-                // Currently saved, switch to edit mode
+            if (isCurrentlyDisabled) {
+                // Currently disabled (saved), switch to edit mode
                 textarea.disabled = false;
                 textarea.focus();
                 updateButtonState(member, false);
             } else {
-                // Currently editing, save it
+                // Currently enabled (editing), save it
                 const wishes = JSON.parse(localStorage.getItem(storageKey) || '{}');
                 wishes[member] = textarea.value;
                 localStorage.setItem(storageKey, JSON.stringify(wishes));
