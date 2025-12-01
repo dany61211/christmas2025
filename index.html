@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎄 Liste de Souhaits Noël (Realtime) 🎄</title>
     <style>
+        /* Your existing CSS */
         * {
             margin: 0;
             padding: 0;
@@ -173,6 +174,31 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+        
+        /* CSS for the loading spinner */
+        .loading-spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            width: 1em;
+            height: 1em;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* End loading spinner CSS */
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
         }
 
         .save-btn {
@@ -520,25 +546,37 @@
             if (!memberCard) return;
 
             const contentDiv = memberCard.querySelector('.wish-content-area');
-            const button = memberCard.querySelector('button');
+            const button = memberCard.querySelector('.button-group button'); // Get the specific button
 
             // Check if the button currently says 'Enregistrer' (meaning we are in edit mode)
-            const isCurrentlyInEditMode = (button.textContent.trim() === 'Enregistrer');
+            const isCurrentlyInEditMode = (button.textContent.trim().replace(/<[^>]*>/g, '').trim() === 'Enregistrer');
 
             if (isCurrentlyInEditMode) {
                 // If in edit mode and button is 'Enregistrer', save the data to Firebase
                 const textareaElement = contentDiv.querySelector('textarea');
                 if (textareaElement) {
                     const wishText = textareaElement.value;
+                    
+                    // 1. Disable the button and show loading state
+                    button.disabled = true;
+                    // Preserve original class for styling, just change text content
+                    button.innerHTML = '<span class="loading-spinner"></span> Enregistrement...'; 
+
                     try {
-                        // Use .set() to save the wish. This will trigger the 'value' listener.
                         await christmasWishesRef.child(member).set(wishText);
                         showSuccessMessage();
                         // The 'listenForWishes' function will then automatically update the UI
-                        // for this member (and everyone else) to the 'saved' state.
+                        // for this member (and everyone else) to the 'saved' state,
+                        // including re-enabling the button and setting its text/class.
                     } catch (error) {
                         console.error("Erreur lors de l'enregistrement du souhait:", error);
                         alert("Erreur lors de l'enregistrement de votre souhait. Veuillez réessayer.");
+                        
+                        // Re-enable and revert button state manually on error
+                        button.disabled = false;
+                        // Since the database didn't update, the listener won't trigger the 'saved' state.
+                        // We must explicitly revert to the 'editing' state on error.
+                        updateButtonState(member, true); 
                     }
                 }
             } else {
@@ -584,13 +622,16 @@
             const button = memberCard.querySelector('.button-group button');
             const statusBadge = memberCard.querySelector('.status-badge');
 
+            // Crucially, re-enable the button when its state is explicitly set by the listener
+            button.disabled = false; 
+
             if (isInEditMode) {
-                button.textContent = 'Enregistrer';
+                button.innerHTML = 'Enregistrer'; // Use innerHTML to allow setting simple text
                 button.className = 'save-btn';
                 statusBadge.textContent = 'Édition';
                 statusBadge.className = 'status-badge status-editing';
             } else {
-                button.textContent = 'Éditer';
+                button.innerHTML = 'Éditer'; // Use innerHTML
                 button.className = 'edit-btn';
                 statusBadge.textContent = 'Enregistré';
                 statusBadge.className = 'status-badge status-saved';
